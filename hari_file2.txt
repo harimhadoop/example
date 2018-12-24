@@ -4,6 +4,25 @@
 
 # In[11]:
 
+
+Join Zoom Meeting
+https://zoom.us/j/5464326048
+
+One tap mobile
++14086380968,,5464326048# US (San Jose)
++16465588656,,5464326048# US (New York)
+
+Dial by your location
+        +1 408 638 0968 US (San Jose)
+        +1 646 558 8656 US (New York)
+Meeting ID: 546 432 6048
+Find your local number: https://zoom.us/u/bdko2f
+
+
+
+
+
+
 uniq_poid_ret_wec = uniq_poid_ret_wec.withColumnRenamed('po_id','po_id_uniq')
 ret_RIM = ret_RIM.withColumnRenamed('po_id','po_id_ret')
 
