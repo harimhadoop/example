@@ -1,0 +1,611 @@
+# Sri Gurubhyonamaha
+
+# coding: utf-8
+
+# In[11]:
+
+import pandas 
+import matplotlib.pyplot as plt
+import numpy as np
+import copy
+#from sklearn import preprocessing
+#from sklearn.preprocessing import MinMaxScaler
+import datetime as DT
+import dateutil.relativedelta
+
+
+
+acxiom_cols = ['PO_ID',
+               'AGE',
+               'PDP_TOT_AMT',
+               'PART_BAL',
+               'GENDR_CD',
+               'WEB_STMT_FL',
+               'PART_FND_CNT',
+               'VMAP_PART_BGN_DT'
+               ]
+
+df_pcar = spark.read.option("header","true").csv('\\\\vanguard\\entdfs\\vgifs01\\EnterpriseAdvice\\ADA & AI\\Data Sets\\IIG\\pcar\\PAR_20180801.csv').select(",".join(acxiom_cols))
+
+
+# In[7]:
+
+att_seg = list(spark.read.option("header","true").csv('C:\\Users\\utun\\Desktop\\ATT_SEG\\ATT_SEG_201807.csv').select("PO_ID").collect())
+
+# In[12]:
+
+df_dc_only=df_pcar.where(~df_pcar['PO_ID'].isin(att_seg))
+
+
+# In[13]: todo
+
+now = pandas.Timestamp(DT.datetime.now())
+df_dc_only['VMAP_PART_BGN_DT'] = pandas.to_datetime(df_dc_only['VMAP_PART_BGN_DT'], format='%d%b%Y')    # 1
+df_dc_only['VMAP_PART_BGN_DT'] = df_dc_only['VMAP_PART_BGN_DT'].where(df_dc_only['VMAP_PART_BGN_DT'] < now, df_dc_only['VMAP_PART_BGN_DT'] -  np.timedelta64(100, 'Y'))   # 2
+df_dc_only['CLNT_TENURE_YEAR'] = (now - df_dc_only['VMAP_PART_BGN_DT']).astype('<m8[Y]')
+
+
+# In[29]:
+
+df_dc_only.withColumn('ADVICE_TYPE','C99_NOT_ADVICE')  #
+df_dc_only.withColumn('CLNT_SGMNT_CD','CO')  #
+df_dc_only.withColumn('ROTH_ACCT_CNT',1)  #
+df_dc_only.withColumn('VBA_VGI_ETF_BAL,0)  #
+df_dc_only.withColumn('VBA_VGI_MF_BAL",1)  #
+df_dc_only.withColumn('LMF_BAL",0)  # 
+df_dc_only.withColumn('POSN_CNT",0)
+df_dc_only.withColumn('VGI_BUY_CNT",0)
+df_dc_only.withColumn('ROLLOVER_ACCT_CNT",0)
+df_dc_only.withColumn('WC_TOT_ASSET",df_dc_only['PART_BAL'])  #
+df_dc_only.withColumn('BEST_AGE",df_dc_only['AGE'])  #
+df_dc_only.withColumn('BRKG_E_DELVRY_FLAG","N")
+df_dc_only.withColumn('BUY_SELL_TOT_CNT",0)
+df_dc_only.withColumn('TRADITIONAL_ACCT_CNT",0)   #
+df_dc_only.withColumn('TAXABLE_ACCT_CNT',0)
+df_dc_only.withColumn('WEB_STMT_PREFNC_FL,df_dc_only['WEB_STMT_FL'])  #
+df_dc_only.withColumn('WATCH_LIST_FL',when(df_dc_only['WEB_STMT_FL']=='Y', 'Y').otherwise('N'))
+
+# In[17]:
+
+wec_pe = spark.read.option("header","true").csv('C:\\Users\\utun\\Downloads\\uniq_poid_pe_wec_red.csv')
+
+
+# In[19]:
+
+df_dc_only['po_id'] = df_dc_only['PO_ID']
+
+
+# In[20]:
+df_dc_only = df_dc_only.join(wec_pe, 'po_id' , how='left')
+#df_dc_only = df_dc_only.merge(wec_pe, on=['po_id'], how='left')
+
+
+# In[21]:
+
+df_dc_only.columns
+
+
+# In[22]:
+
+df_dc_only = df_dc_only.withColumn('IIG_LOGON_CNT',df_dc_only['total_pgvw360'])
+
+
+# In[30]:
+
+df_dc_only = df_dc_only.select('PO_ID','ADVICE_TYPE','BEST_AGE','BRKG_E_DELVRY_FLAG','BUY_SELL_TOT_CNT','CLNT_SGMNT_CD','CLNT_TENURE_YEAR','GENDR_CD','LMF_BAL','POSN_CNT','IIG_LOGON_CNT','ROLLOVER_ACCT_CNT','ROTH_ACCT_CNT','TAXABLE_ACCT_CNT','TRADITIONAL_ACCT_CNT','VBA_VGI_ETF_BAL','VBA_VGI_MF_BAL','VGI_BUY_CNT','WATCH_LIST_FL','WC_TOT_ASSET','WEB_STMT_PREFNC_FL')
+
+
+# In[31]:
+
+#ADVICE_TYPE
+
+df_dc_only=df_dc_only.withColumn("ADVICE_TYPE_1",(df_dc_only["ADVICE_TYPE"]=="C01_PAS_CURRENT")*1)  #== check whether it is true or false and *1 changes the True/False to 1/0
+df_dc_only=df_dc_only.withColumn("ADVICE_TYPE_2",(df_dc_only["ADVICE_TYPE"]=="C02_PLAN_GEN")*1   )
+df_dc_only=df_dc_only.withColumn("ADVICE_TYPE_3",(df_dc_only["ADVICE_TYPE"]=="C03_ADVICE_REC")*1 )  
+df_dc_only=df_dc_only.withColumn("ADVICE_TYPE_4",(df_dc_only["ADVICE_TYPE"]=="C04_PROFL_GEN")*1  ) 
+df_dc_only=df_dc_only.withColumn("ADVICE_TYPE_99",(df_dc_only["ADVICE_TYPE"]=="C99_NOT_ADVICE")*1) 
+  
+
+#BEST_AGE
+df_dc_only=df_dc_only.withColumn("BEST_AGE_buckets",0)
+df_dc_only=df_dc_only.withColumn("BEST_AGE_buckets",when(df_dc_only["BEST_AGE"]<=34,1).otherwise(when((df_dc_only["BEST_AGE"]>=35) & (df_dc_only["BEST_AGE"]<=49),2).\
+otherwise(when((df_dc_only["BEST_AGE"]>=50) & (df_dc_only["BEST_AGE"]<=64),3).otherwise(when(df_dc_only["BEST_AGE"]>=65,4).\
+otherwise(df_dc_only["BEST_AGE_buckets"])))))
+
+
+
+# need to check 
+#BRKG_E_DELVRY_FLAG    
+df_dc_only["BRKG_E_DELVRY_FLAG_1"]=(df_dc_only["BRKG_E_DELVRY_FLAG"]=="Y")*1
+
+
+#BUY_SELL_TOT_COUNT
+
+df_dc_only=df_dc_only.withColumn("BUY_SELL_TOT_COUNT_buckets",0)
+df_dc_only=df_dc_only.withColumn("BUY_SELL_TOT_COUNT_buckets",when((df_dc_only["BUY_SELL_TOT_CNT"]>=1) & (df_dc_only["BUY_SELL_TOT_CNT"]<=4),1).\
+otherwise(when((df_dc_only["BUY_SELL_TOT_CNT"]>=5) & (df_dc_only["BUY_SELL_TOT_CNT"]<=15),2).\
+otherwise(when((df_dc_only["BUY_SELL_TOT_CNT"]>=16) & (df_dc_only["BUY_SELL_TOT_CNT"]<=30),3).\
+otherwise(when(df_dc_only["BUY_SELL_TOT_CNT"]>=31,4).\
+otherwise(df_dc_only["BEST_AGE_buckets"])))))
+
+
+##CLNT_SGMNT_CD
+df_dc_only=df_dc_only.withColumn("CLNT_SGMNT_CD_CO",when(df_dc_only["CLNT_SGMNT_CD"]=="CO",(df_dc_only["CLNT_SGMNT_CD"])*1).otherwise(0))
+df_dc_only=df_dc_only.withColumn("CLNT_SGMNT_CD_FL",when(df_dc_only["CLNT_SGMNT_CD"]=="FL",(df_dc_only["CLNT_SGMNT_CD"])*1).otherwise(0))
+df_dc_only=df_dc_only.withColumn("CLNT_SGMNT_CD_VS",when(df_dc_only["CLNT_SGMNT_CD"]=="VS",(df_dc_only["CLNT_SGMNT_CD"])*1).otherwise(0))
+df_dc_only=df_dc_only.withColumn("CLNT_SGMNT_CD_VY",when(df_dc_only["CLNT_SGMNT_CD"]=="VY",(df_dc_only["CLNT_SGMNT_CD"])*1).otherwise(0))
+
+
+#CLNT_TENURE_YEAR
+
+df_dc_only=df_dc_only.withColumn("CLNT_TENURE_YEAR_buckets",0)
+df_dc_only=df_dc_only.withColumn("BUY_SELL_TOT_COUNT_buckets",\
+when((df_dc_only["CLNT_TENURE_YEAR"]>=0) & (df_dc_only["CLNT_TENURE_YEAR"]<=4),1).\
+otherwise(when((df_dc_only["CLNT_TENURE_YEAR"]>=5) & (df_dc_only["CLNT_TENURE_YEAR"]<=10),2).\
+otherwise(when((df_dc_only["CLNT_TENURE_YEAR"]>=11) & (df_dc_only["CLNT_TENURE_YEAR"]<=15),3).\
+otherwise(when((df_dc_only["CLNT_TENURE_YEAR"]>=16) & (df_dc_only["CLNT_TENURE_YEAR"]<=19),4).\
+otherwise(when(df_dc_only["CLNT_TENURE_YEAR"]>=20,5).\
+otherwise(df_dc_only["BEST_AGE_buckets"]))))))
+
+
+
+
+#GENDER_CD
+df_dc_only=df_dc_only.withColumn("GENDER_CD_1",when((df_dc_only["GENDR_CD"]=="M"),(df_dc_only["GENDR_CD"])*1).otherwise(0))
+
+
+#LMF_BAL
+
+df_dc_only=df_dc_only.withColumn("LMF_BAL_1",when((df_dc_only["LMF_BAL"]>0),(df_dc_only["LMF_BAL"])*1).otherwise(0))
+
+
+#POSN_CNT
+df_dc_only=df_dc_only.withColumn("POSN_CNT_buckets",0)
+df_dc_only=df_dc_only.withColumn("POSN_CNT_buckets",\
+when((df_dc_only["POSN_CNT"]>=0) & (df_dc_only["POSN_CNT"]<=1),1).\
+otherwise(when((df_dc_only["POSN_CNT"]==2),2).\
+otherwise(when((df_dc_only["POSN_CNT"]==3),3).\
+otherwise(when((df_dc_only["POSN_CNT"]==4),4).\
+otherwise(when((df_dc_only["POSN_CNT"]==5),5).\
+otherwise(when((df_dc_only["POSN_CNT"]==6),6).\
+otherwise(when((df_dc_only["POSN_CNT"]>=7) & (df_dc_only["POSN_CNT"]<=10),7).\
+otherwise(when((df_dc_only["POSN_CNT"]>=11) & (df_dc_only["POSN_CNT"]<=15),8).\
+otherwise(when(df_dc_only["POSN_CNT"]>=16,9).\
+otherwise(df_dc_only["POSN_CNT_buckets"]))))))))))
+
+
+#IIG_LOGON_CNT
+#IIG_LOGON_CNT
+df_dc_only=df_dc_only.withColumn("IIG_LOGON_CNT_buckets",0)
+df_dc_only=df_dc_only.withColumn("IIG_LOGON_CNT_buckets",\
+when((df_dc_only["IIG_LOGON_CNT"]>=0) & (df_dc_only["IIG_LOGON_CNT"]<=2),1).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=3) & (df_dc_only["IIG_LOGON_CNT"]<=5),2).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=6) & (df_dc_only["IIG_LOGON_CNT"]<=9),3).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=10) & (df_dc_only["IIG_LOGON_CNT"]<=15),4).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=16) & (df_dc_only["IIG_LOGON_CNT"]<=20),5).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=21) & (df_dc_only["IIG_LOGON_CNT"]<=30),6).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=31) & (df_dc_only["IIG_LOGON_CNT"]<=40),7).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=41) & (df_dc_only["IIG_LOGON_CNT"]<=50),8).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=51) & (df_dc_only["IIG_LOGON_CNT"]<=75),9).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=76) & (df_dc_only["IIG_LOGON_CNT"]<=100),10).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=101) & (df_dc_only["IIG_LOGON_CNT"]<=200),11).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=201) & (df_dc_only["IIG_LOGON_CNT"]<=300),12).\
+otherwise(when((df_dc_only["IIG_LOGON_CNT"]>=301) & (df_dc_only["IIG_LOGON_CNT"]<=400),13).\
+otherwise(when(df_dc_only["IIG_LOGON_CNT"]>=401,401).\
+otherwise(df_dc_only["IIG_LOGON_CNT_buckets"])))))))))))))))
+
+
+#ROLLOVER_ACCT_CNT 
+
+df_dc_only=df_dc_only.withColumn("ROLLOVER_ACCT_CNT_1",0)
+df_dc_only=df_dc_only.withColumn("ROLLOVER_ACCT_CNT_1",\
+when((f_dc_only["ROLLOVER_ACCT_CNT"]>0),1).\
+otherwise(f_dc_only["ROLLOVER_ACCT_CNT"]))
+
+
+#ROTH_ACCT_CNT 
+
+df_dc_only=df_dc_only.withColumn("ROTH_ACCT_CNT_1",0)
+df_dc_only=df_dc_only.withColumn("ROTH_ACCT_CNT_1",\
+when((f_dc_only["ROTH_ACCT_CNT"]>0),1).\
+otherwise(f_dc_only["ROTH_ACCT_CNT"]))
+
+#TAXABLE_ACCT_CNT  
+
+df_dc_only=df_dc_only.withColumn("TAXABLE_ACCT_CNT_1",0)
+df_dc_only=df_dc_only.withColumn("TAXABLE_ACCT_CNT_1",\
+when((f_dc_only["TAXABLE_ACCT_CNT"]>0),1).\
+otherwise(f_dc_only["TAXABLE_ACCT_CNT"]))
+
+
+#TRADITIONAL_ACCT_CNT   
+
+df_dc_only=df_dc_only.withColumn("TRADITIONAL_ACCT_CNT_1",0)
+df_dc_only=df_dc_only.withColumn("TRADITIONAL_ACCT_CNT_1",\
+when((f_dc_only["TAXABLE_ACCT_CNT"]>0),1).\
+otherwise(f_dc_only["TAXABLE_ACCT_CNT"]))
+
+
+#VBA_VGI_ETF_BAL
+
+df_dc_only=df_dc_only.withColumn("VBA_VGI_ETF_BAL_1",0)
+df_dc_only=df_dc_only.withColumn("VBA_VGI_ETF_BAL_1",\
+when((f_dc_only["VBA_VGI_ETF_BAL"]>0),1).\
+otherwise(f_dc_only["VBA_VGI_ETF_BAL"]))
+
+
+#VBA_VGI_MF_BAL  
+
+df_dc_only=df_dc_only.withColumn("VBA_VGI_MF_BAL_1",0)
+df_dc_only=df_dc_only.withColumn("VBA_VGI_MF_BAL_1",\
+when((f_dc_only["VBA_VGI_MF_BAL"]>0),1).\
+otherwise(f_dc_only["VBA_VGI_MF_BAL"]))
+
+
+#VGI_BUY_CNT   
+
+df_dc_only=df_dc_only.withColumn("VGI_BUY_CNT_buckets",0)
+df_dc_only=df_dc_only.withColumn("VGI_BUY_CNT_buckets",\
+when((df_dc_only["VGI_BUY_CNT"]>=1) & (df_dc_only["VGI_BUY_CNT"]<=2),1).\
+otherwise(when((f_dc_only["VGI_BUY_CNT"]>=3),2).\
+otherwise(f_dc_only["VGI_BUY_CNT"])))
+
+
+#WATCH_LIST_FL
+
+df_dc_only=df_dc_only.withColumn("WATCH_LIST_FL_1",0)
+df_dc_only=df_dc_only.withColumn("WATCH_LIST_FL_1",\
+when((df_dc_only["WATCH_LIST_FL"]=="Y"),(df_dc_only["WATCH_LIST_FL"])*1).\
+otherwise(df_dc_only["WATCH_LIST_FL"]))
+
+
+
+#WC_TOT_ASSET
+df_dc_only["WC_TOT_ASSET_buckets"]=0
+df_dc_only.loc[df_dc_only["WC_TOT_ASSET"]<=26000,["WC_TOT_ASSET_buckets"]]=1
+df_dc_only.loc[(df_dc_only["WC_TOT_ASSET"]>=26001) & (df_dc_only["WC_TOT_ASSET"]<=190000),["WC_TOT_ASSET_buckets"]]=2
+df_dc_only.loc[(df_dc_only["WC_TOT_ASSET"]>=190001) & (df_dc_only["WC_TOT_ASSET"]<=320000),["WC_TOT_ASSET_buckets"]]=3
+df_dc_only.loc[(df_dc_only["WC_TOT_ASSET"]>=320001) & (df_dc_only["WC_TOT_ASSET"]<=485000),["WC_TOT_ASSET_buckets"]]=4
+df_dc_only.loc[(df_dc_only["WC_TOT_ASSET"]>=485001) & (df_dc_only["WC_TOT_ASSET"]<=1090000),["WC_TOT_ASSET_buckets"]]=5
+df_dc_only.loc[(df_dc_only["WC_TOT_ASSET"]>=1090001) & (df_dc_only["WC_TOT_ASSET"]<=1710000),["WC_TOT_ASSET_buckets"]]=6
+df_dc_only.loc[df_dc_only["WC_TOT_ASSET"]>=1710001,["WC_TOT_ASSET_buckets"]]=7
+
+#WEB_STMT_PREFNC_FL
+df_dc_only["WEB_STMT_PREFNC_FL_1"]=(df_dc_only["WEB_STMT_PREFNC_FL"]=="N")*1
+df_dc_only["WEB_STMT_PREFNC_FL_2"]=(df_dc_only["WEB_STMT_PREFNC_FL"]=="Y")*1
+
+df_dc_onlyshort=df_dc_only.head()
+
+c1 = df_dc_only[['PO_ID','ADVICE_TYPE_1',
+'ADVICE_TYPE_2',
+'ADVICE_TYPE_3',
+'ADVICE_TYPE_4',
+'ADVICE_TYPE_99',
+'BEST_AGE_buckets',
+'BRKG_E_DELVRY_FLAG_1',
+'BUY_SELL_TOT_COUNT_buckets',
+'CLNT_SGMNT_CD_CO',
+'CLNT_SGMNT_CD_FL',
+'CLNT_SGMNT_CD_VS',
+'CLNT_SGMNT_CD_VY',
+'CLNT_TENURE_YEAR_buckets',
+'GENDER_CD_1',
+'LMF_BAL_1',
+'POSN_CNT_buckets',
+'IIG_LOGON_CNT_buckets',
+'ROLLOVER_ACCT_CNT_1',
+'ROTH_ACCT_CNT_1',
+'TAXABLE_ACCT_CNT_1',
+'TRADITIONAL_ACCT_CNT_1',
+'VBA_VGI_ETF_BAL_1',
+'VBA_VGI_MF_BAL_1',
+'VGI_BUY_CNT_buckets',
+'WATCH_LIST_FL_1',
+'WC_TOT_ASSET_buckets',
+'WEB_STMT_PREFNC_FL_1',
+'WEB_STMT_PREFNC_FL_2']]
+
+
+
+# In[32]:
+
+acxiom_file = r'\\vanguard\entdfs\vgifs01\EnterpriseAdvice\ADA & AI\Data Sets\Acxiom\Acxiom_Oct2018.tsv'
+
+acxiom_cols = ['po_id',
+               'ap001374_advicepricefullsvcbrkg',
+               'ap001380_buysellstockfullsvcbrkg',
+               'ap001398_othfullsvcaffin',
+               'ap001402_metfinplanner',
+               'ap001403_usepersnlmonmgr',
+               'ap002719_heavyfbuser',
+               'ap002727_businessfan']
+
+ax = pandas.read_csv(acxiom_file,usecols=acxiom_cols,sep='\t')
+
+
+# In[33]:
+
+ax.replace(' ',np.nan,inplace=True)
+
+ax[acxiom_cols[1:]] = ax[acxiom_cols[1:]].astype(float)
+ax['po_id'] = ax['po_id'].astype(int)
+
+#ap001374_advicepricefullsvcbrkg
+ax["ap001374_advicepricefullsvcbrkg_1"]=(ax["ap001374_advicepricefullsvcbrkg"]==1)*1
+ax["ap001374_advicepricefullsvcbrkg_2"]=(ax["ap001374_advicepricefullsvcbrkg"]==2)*1
+ax["ap001374_advicepricefullsvcbrkg_3"]=(ax["ap001374_advicepricefullsvcbrkg"]==3)*1
+ax["ap001374_advicepricefullsvcbrkg_4to5"]=0
+ax["ap001374_advicepricefullsvcbrkg_6to10"]=0
+
+ax.loc[(ax["ap001374_advicepricefullsvcbrkg"]>=4) & (ax["ap001374_advicepricefullsvcbrkg"]<=5),["ap001374_advicepricefullsvcbrkg_4to5"]]=1
+ax.loc[(ax["ap001374_advicepricefullsvcbrkg"]>=6) & (ax["ap001374_advicepricefullsvcbrkg"]<=10),["ap001374_advicepricefullsvcbrkg_6to10"]]=1
+
+
+#ap001380_buysellstockfullsvcbrkg_1to3
+ax["ap001380_buysellstockfullsvcbrkg_1to3"]=0
+ax.loc[(ax["ap001380_buysellstockfullsvcbrkg"]>=1) & (ax["ap001380_buysellstockfullsvcbrkg"]<=3),["ap001380_buysellstockfullsvcbrkg_1to3"]]=1
+
+
+#ap001398_othfullsvcaffin
+ax["ap001398_othfullsvcaffin_1"]=(ax["ap001398_othfullsvcaffin"]==1)*1
+ax["ap001398_othfullsvcaffin_2"]=(ax["ap001398_othfullsvcaffin"]==2)*1
+ax["ap001398_othfullsvcaffin_3"]=(ax["ap001398_othfullsvcaffin"]==3)*1
+
+ax["ap001398_othfullsvcaffin_4to5"]=0
+ax["ap001398_othfullsvcaffin_6to10"]=0
+ax.loc[(ax["ap001398_othfullsvcaffin"]>=4) & (ax["ap001398_othfullsvcaffin"]<=5),["ap001398_othfullsvcaffin_4to5"]]=1
+ax.loc[(ax["ap001398_othfullsvcaffin"]>=6) & (ax["ap001398_othfullsvcaffin"]<=10),["ap001398_othfullsvcaffin_6to10"]]=1
+
+
+#ap001402_metfinplanner
+ax["ap001402_metfinplanner_1to5"]=0
+ax["ap001402_metfinplanner_6to9"]=0
+ax["ap001402_metfinplanner_10plus"]=0
+ax.loc[(ax["ap001402_metfinplanner"]>=1) & (ax["ap001402_metfinplanner"]<=5),["ap001402_metfinplanner_1to5"]]=1
+ax.loc[(ax["ap001402_metfinplanner"]>=6) & (ax["ap001402_metfinplanner"]<=9),["ap001402_metfinplanner_6to9"]]=1
+ax.loc[ax["ap001402_metfinplanner"]>=10,["ap001402_metfinplanner_10plus"]]=1
+
+#ap001403_usepersnlmonmgr
+ax["ap001403_usepersnlmonmgr_1"]=(ax["ap001403_usepersnlmonmgr"]==1)*1
+ax["ap001403_usepersnlmonmgr_2"]=(ax["ap001403_usepersnlmonmgr"]==2)*1
+ax["ap001403_usepersnlmonmgr_3"]=(ax["ap001403_usepersnlmonmgr"]==3)*1
+
+ax["ap001403_usepersnlmonmgr_4to5"]=0
+ax["ap001403_usepersnlmonmgr_6to10"]=0
+ax.loc[(ax["ap001403_usepersnlmonmgr"]>=4) & (ax["ap001403_usepersnlmonmgr"]<=5),["ap001403_usepersnlmonmgr_4to5"]]=1
+ax.loc[(ax["ap001403_usepersnlmonmgr"]>=6) & (ax["ap001403_usepersnlmonmgr"]<=10),["ap001403_usepersnlmonmgr_6to10"]]=1
+
+
+#AP002719_HEAVYFBUSER
+ax["ap002719_heavyfbuser_1"]=0
+ax["ap002719_heavyfbuser_2"]=0
+ax["ap002719_heavyfbuser_5to12"]=0
+ax.loc[(ax["ap002719_heavyfbuser"]>=1) & (ax["ap002719_heavyfbuser"]<=10),["ap002719_heavyfbuser_1"]]=1
+ax.loc[(ax["ap002719_heavyfbuser"]>=11) & (ax["ap002719_heavyfbuser"]<=20),["ap002719_heavyfbuser_2"]]=1
+ax.loc[(ax["ap002719_heavyfbuser"]>=5) & (ax["ap002719_heavyfbuser"]<=12),["ap002719_heavyfbuser_5to12"]]=1
+
+#AP002727_BUSINESSFAN
+ax["ap002727_businessfan_8to10"]=0
+ax["ap002727_businessfan_11to12"]=0
+ax["ap002727_businessfan_13to14"]=0
+ax["ap002727_businessfan_15to16"]=0
+ax["ap002727_businessfan_17andup"]=0
+ax.loc[(ax["ap002727_businessfan"]>=8) & (ax["ap002727_businessfan"]<=10),["ap002727_businessfan_8to10"]]=1
+ax.loc[(ax["ap002727_businessfan"]>=11) & (ax["ap002727_businessfan"]<=12),["ap002727_businessfan_11to12"]]=1
+ax.loc[(ax["ap002727_businessfan"]>=13) & (ax["ap002727_businessfan"]<=14),["ap002727_businessfan_13to14"]]=1
+ax.loc[(ax["ap002727_businessfan"]>=15) & (ax["ap002727_businessfan"]<=16),["ap002727_businessfan_15to16"]]=1
+ax.loc[ax["ap002727_businessfan"]>=17, ["ap002727_businessfan_17andup"]]=1
+
+
+# In[34]:
+
+ax['PO_ID']=ax['po_id']
+
+
+# In[36]:
+
+a1 = ax[['PO_ID',
+'ap001374_advicepricefullsvcbrkg_1',
+'ap001374_advicepricefullsvcbrkg_2',
+'ap001374_advicepricefullsvcbrkg_3',
+'ap001374_advicepricefullsvcbrkg_4to5',
+'ap001374_advicepricefullsvcbrkg_6to10',
+'ap001380_buysellstockfullsvcbrkg_1to3',
+'ap001398_othfullsvcaffin_1',
+'ap001398_othfullsvcaffin_2',
+'ap001398_othfullsvcaffin_3',
+'ap001398_othfullsvcaffin_4to5',
+'ap001398_othfullsvcaffin_6to10',
+'ap001402_metfinplanner_1to5',
+'ap001402_metfinplanner_6to9',
+'ap001402_metfinplanner_10plus',
+'ap001403_usepersnlmonmgr_1',
+'ap001403_usepersnlmonmgr_2',
+'ap001403_usepersnlmonmgr_3',
+'ap001403_usepersnlmonmgr_4to5',
+'ap001403_usepersnlmonmgr_6to10',
+'ap002719_heavyfbuser_1',
+'ap002719_heavyfbuser_2',
+'ap002719_heavyfbuser_5to12',
+'ap002727_businessfan_8to10',
+'ap002727_businessfan_11to12',
+'ap002727_businessfan_13to14',
+'ap002727_businessfan_15to16',
+'ap002727_businessfan_17andup']]
+
+
+c1short=c1.head()
+a1short=a1.head()
+
+model =  pandas.merge(c1, a1, on='PO_ID', how='inner', sort=True, )
+
+
+
+
+
+# In[39]:
+
+########################### MODEL 5 (which has 6 varibales)
+mult5=pandas.read_csv(r'C:\users\utun\Downloads\Att Seg Model 5.csv') #read_csv is a funcction in pandas
+#mult5names=pd.read_csv(r'\\vanguard\entdfs\prdentas01cia11\MZippilli\2018\Attitudnal Segmentation\AttSegModel 5Names.csv') #read_csv is a funcction in pandas
+con5=pandas.read_csv(r'C:\users\utun\Downloads\con5.csv') #read_csv is a funcction in pandas
+
+
+# In[41]:
+
+mod5=['ADVICE_TYPE_1',
+'ADVICE_TYPE_2',
+'ADVICE_TYPE_3',
+'ADVICE_TYPE_4',
+'ADVICE_TYPE_99',
+'ap001380_buysellstockfullsvcbrkg_1to3',
+'ap001402_metfinplanner_10plus',
+'ap001402_metfinplanner_1to5',
+'ap001402_metfinplanner_6to9',
+'ap002719_heavyfbuser_1',
+'ap002719_heavyfbuser_2',
+'ap002727_businessfan_11to12',
+'ap002727_businessfan_13to14',
+'ap002727_businessfan_15to16',
+'ap002727_businessfan_17andup',
+'ap002727_businessfan_8to10',
+'BEST_AGE_buckets',
+'BRKG_E_DELVRY_FLAG_1',
+'BUY_SELL_TOT_COUNT_buckets',
+'CLNT_SGMNT_CD_CO',
+'CLNT_SGMNT_CD_FL',
+'CLNT_SGMNT_CD_VS',
+'CLNT_SGMNT_CD_VY',
+'CLNT_TENURE_YEAR_buckets',
+'GENDER_CD_1',
+'LMF_BAL_1',
+'POSN_CNT_buckets',
+'IIG_LOGON_CNT_buckets',
+'ROLLOVER_ACCT_CNT_1',
+'ROTH_ACCT_CNT_1',
+'TAXABLE_ACCT_CNT_1',
+'VBA_VGI_ETF_BAL_1',
+'VBA_VGI_MF_BAL_1',
+'VGI_BUY_CNT_buckets',
+'WATCH_LIST_FL_1',
+'WC_TOT_ASSET_buckets',
+'WEB_STMT_PREFNC_FL_1',
+'WEB_STMT_PREFNC_FL_2']
+
+model5copy=model.copy()
+
+for n in range(6):
+    sum_name="SEG_"+str(n+1)+"_SUM"
+    model5copy[sum_name]=model5copy[mod5].dot(mult5.iloc[:,n].values)#the : refers to all the rows
+    
+
+
+for n in range(6):
+    tot_name="t"+str(n+1)
+    model5copy[tot_name]=model5copy["SEG_"+str(n+1)+"_SUM"] + con5["Constant"+str(n+1)].values
+
+
+m5 = model5copy[['PO_ID','t1','t2','t3','t4','t5','t6']]
+m5short=m5.head(50)
+
+m5["pred"]=m5[['t1','t2','t3','t4','t5','t6']].max(axis=1)
+m5pred=m5.head(50)
+
+
+# In[42]:
+
+
+m5["SEG_NUMBER"]=0
+m5.loc[m5["pred"]==m5["t1"],["SEG_NUMBER"]]=1
+m5.loc[m5["pred"]==m5["t2"],["SEG_NUMBER"]]=2
+m5.loc[m5["pred"]==m5["t3"],["SEG_NUMBER"]]=3
+m5.loc[m5["pred"]==m5["t4"],["SEG_NUMBER"]]=4
+m5.loc[m5["pred"]==m5["t5"],["SEG_NUMBER"]]=5
+m5.loc[m5["pred"]==m5["t6"],["SEG_NUMBER"]]=6
+
+m5fs=m5.head(50)
+
+m5["SEG_DESCRIPTION"]=0
+m5.loc[m5["SEG_NUMBER"]==[1],["SEG_DESCRIPTION"]]="Confident Wealth-Builders"
+m5.loc[m5["SEG_NUMBER"]==[2],["SEG_DESCRIPTION"]]="Unsure Information-Seekers"
+m5.loc[m5["SEG_NUMBER"]==[3],["SEG_DESCRIPTION"]]="Professional Advice Delegators"
+m5.loc[m5["SEG_NUMBER"]==[4],["SEG_DESCRIPTION"]]="Ambitious Wealth-Builders"
+m5.loc[m5["SEG_NUMBER"]==[5],["SEG_DESCRIPTION"]]="Discerning DIYers"
+m5.loc[m5["SEG_NUMBER"]==[6],["SEG_DESCRIPTION"]]="Apprehensive Advice-Seekers"
+
+m5["PERSONA"]=0
+m5.loc[m5["SEG_NUMBER"]==[1],["PERSONA"]]="Red"
+m5.loc[m5["SEG_NUMBER"]==[2],["PERSONA"]]="Lavender"
+m5.loc[m5["SEG_NUMBER"]==[3],["PERSONA"]]="Peach"
+m5.loc[m5["SEG_NUMBER"]==[4],["PERSONA"]]="Violet"
+m5.loc[m5["SEG_NUMBER"]==[5],["PERSONA"]]="Orange"
+m5.loc[m5["SEG_NUMBER"]==[6],["PERSONA"]]="Sky"
+
+
+ATT_SEG=m5[['PO_ID','SEG_NUMBER','SEG_DESCRIPTION','PERSONA']]
+
+ATT_PERSONA=m5[['PO_ID','PERSONA']]
+
+
+m5short=m5.head(20)
+
+m5['SEG_NUMBER'].value_counts(sort=False)
+
+
+
+ATT_SEGshort=ATT_SEG.head(20)
+
+
+
+# In[49]:
+
+ATT_SEG['SEG_NUMBER'].unique()
+
+
+
+# In[48]:
+
+ATT_SEG.to_csv(path_or_buf=r'C:\users\utun\Downloads\ATT_SEG\ATT_SEG_201807.csv', sep=',',na_rep='',index=False)
+
+
+# In[50]:
+
+rtl_att_seg=pandas.read_csv(r'C:\Users\utun\Desktop\ATT_SEG\ATT_SEG_201809.csv') #read_csv is a funcction in pandas
+
+
+# In[54]:
+
+ATT_SEG.columns
+
+
+# In[55]:
+
+rtl_att_seg.columns
+
+
+# In[56]:
+
+frames = [ATT_SEG, rtl_att_seg]
+rtl_iig_att_seg = pandas.concat(frames)
+
+
+# In[57]:
+
+rtl_iig_att_seg.to_csv(r'C:\users\utun\Downloads\ATT_SEG\RTL_IIG_ATT_SEG_201809.csv')
+
+
+# In[59]:
+
+ATT_SEG.dtypes
+
+
+# In[63]:
+
+ATT_SEG.loc[~ATT_SEG['PERSONA'].isin(['Sky'])]
+
+
+# In[ ]:
+
+
+
+3km55
