@@ -11,8 +11,8 @@ uniq_poid_ret_wec.show()
 
 for x in unique_web_cnt:
     for  z in times:
-                uniq_poid_ret_wec = uniq_poid_ret_wec.withColumn(x + '_sess' + z, when(uniq_poid_ret_wec[ ret_wec['web_content1'] == x],uniq_poid_ret_wec['sessions_last'+z]).otherwise(0)
-                uniq_poid_ret_wec = uniq_poid_ret_wec.withColumn(x + '_pgvw' + z, when(uniq_poid_ret_wec[ ret_wec['web_content1'] == x],uniq_poid_ret_wec['page_views_last'+z]).otherwise(0)
+                uniq_poid_ret_wec = uniq_poid_ret_wec.withColumn(x + '_sess' + z, when(uniq_poid_ret_wec[ 'web_content1'] == x,uniq_poid_ret_wec['sessions_last'+z]).otherwise(0))
+                uniq_poid_ret_wec = uniq_poid_ret_wec.withColumn(x + '_pgvw' + z, when(uniq_poid_ret_wec[ 'web_content1'] == x,uniq_poid_ret_wec['page_views_last'+z]).otherwise(0))
 uniq_poid_ret_wec = uniq_poid_ret_wec.fillna(0)
 uniq_poid_ret_wec.show()
 
