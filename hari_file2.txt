@@ -5,6 +5,27 @@
 # In[11]:
 
 
+
+#/*ELIMINATE VISITORS NOT IN BASE*/
+web2 = pandas.merge(web1,df_bal3[['po_id_uniq','bin_web_reg_fl_now']], , how='right', indicator=False)
+
+temp_bal3=df_bal3.select('po_id_uniq','po_id_ret','bin_web_reg_fl_now')
+web2 = web1.join( temp_bal3,(web1['po_id_ret'] == temp_bal3['po_id'])|(web1['po_id_uniq'] == temp_bal3['po_id']), 'right')
+
+web2 = web2.withColumn("logon_persona_number",when((web2['bin_web_reg_fl_now']==0) & (web2['logon_persona_number'].isnull()),98).\                       
+otherwise(web2['logon_persona_number']))
+web2 = web2.withColumn("logon_persona_name",when((web2['bin_web_reg_fl_now']==0) & (web2['logon_persona_number'].isnull()),'INACTIVE/NOT WEB REGISTERED').\
+                       otherwise(web2['logon_persona_name']))
+
+
+
+
+
+
+
+
+
+
 Join Zoom Meeting
 https://zoom.us/j/5464326048
 
