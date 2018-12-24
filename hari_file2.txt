@@ -4,6 +4,12 @@
 
 # In[11]:
 
+
+ret_wec.registerTempTable("uniq_poid_ret_wec")
+uniq_poid_ret_wec = spark.sql("select distinct("po_id") as 'po_id' , web_content1")
+uniq_poid_ret_wec.show()
+
+
 import pandas 
 import matplotlib.pyplot as plt
 import numpy as np
