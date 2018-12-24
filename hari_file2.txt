@@ -4,6 +4,13 @@
 
 # In[11]:
 
+uniq_poid_ret_wec = uniq_poid_ret_wec.withColumnRenamed('po_id','po_id_uniq')
+ret_RIM = ret_RIM.withColumnRenamed('po_id','po_id_ret')
+
+uniq_poid_ret_wec['po_id_uniq']==ret_RIM['po_id_ret']
+
+
+
 ret_wec.registerTempTable("uniq_poid_ret_wec")
 uniq_poid_ret_wec = spark.sql("select distinct(po_id) as po_id_dis "+",".join(cols)+ "from uniq_poid_ret_wec")
 uniq_poid_ret_wec = uniq_poid_ret_wec.drop('po_id').withColumnRenamed('po_id_dis,'po_id')
