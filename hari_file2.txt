@@ -263,14 +263,6 @@ otherwise(when(df_dc_only["IIG_LOGON_CNT"]>=401,401).\
 otherwise(df_dc_only["IIG_LOGON_CNT_buckets"])))))))))))))))
 
 
-#ROLLOVER_ACCT_CNT 
-
-df_dc_only=df_dc_only.withColumn("ROLLOVER_ACCT_CNT_1",0)
-df_dc_only=df_dc_only.withColumn("ROLLOVER_ACCT_CNT_1",\
-when((f_dc_only["ROLLOVER_ACCT_CNT"]>0),1).\
-otherwise(f_dc_only["ROLLOVER_ACCT_CNT"]))
-
-
 #ROTH_ACCT_CNT 
 
 df_dc_only=df_dc_only.withColumn("ROTH_ACCT_CNT_1",0)
@@ -329,22 +321,29 @@ otherwise(df_dc_only["WATCH_LIST_FL"]))
 
 
 #WC_TOT_ASSET
-df_dc_only["WC_TOT_ASSET_buckets"]=0
-df_dc_only.loc[df_dc_only["WC_TOT_ASSET"]<=26000,["WC_TOT_ASSET_buckets"]]=1
-df_dc_only.loc[(df_dc_only["WC_TOT_ASSET"]>=26001) & (df_dc_only["WC_TOT_ASSET"]<=190000),["WC_TOT_ASSET_buckets"]]=2
-df_dc_only.loc[(df_dc_only["WC_TOT_ASSET"]>=190001) & (df_dc_only["WC_TOT_ASSET"]<=320000),["WC_TOT_ASSET_buckets"]]=3
-df_dc_only.loc[(df_dc_only["WC_TOT_ASSET"]>=320001) & (df_dc_only["WC_TOT_ASSET"]<=485000),["WC_TOT_ASSET_buckets"]]=4
-df_dc_only.loc[(df_dc_only["WC_TOT_ASSET"]>=485001) & (df_dc_only["WC_TOT_ASSET"]<=1090000),["WC_TOT_ASSET_buckets"]]=5
-df_dc_only.loc[(df_dc_only["WC_TOT_ASSET"]>=1090001) & (df_dc_only["WC_TOT_ASSET"]<=1710000),["WC_TOT_ASSET_buckets"]]=6
-df_dc_only.loc[df_dc_only["WC_TOT_ASSET"]>=1710001,["WC_TOT_ASSET_buckets"]]=7
+df_dc_only=df_dc_only.withColumn("WC_TOT_ASSET_buckets",0)
+df_dc_only=df_dc_only.withColumn("WC_TOT_ASSET_buckets",\
+when((df_dc_only["WC_TOT_ASSET"]<=26000),1).\
+otherwise(when((df_dc_only["WC_TOT_ASSET"]>=26001) & (df_dc_only["WC_TOT_ASSET"]<=190000),2).\
+otherwise(when((df_dc_only["WC_TOT_ASSET"]>=190001) & (df_dc_only["WC_TOT_ASSET"]<=320000),3).\
+otherwise(when((df_dc_only["WC_TOT_ASSET"]>=320001) & (df_dc_only["WC_TOT_ASSET"]<=485000),4).\
+otherwise(when((df_dc_only["WC_TOT_ASSET"]>=485001) & (df_dc_only["WC_TOT_ASSET"]<=1090000),5).\
+otherwise(when((df_dc_only["WC_TOT_ASSET"]>=1090001) & (df_dc_only["WC_TOT_ASSET"]<=1710000),6).\
+otherwise(when((df_dc_only["WC_TOT_ASSET"]>=1710001),7).\
+otherwise(df_dc_only["WC_TOT_ASSET"]>=1710001))))))))
+
+
 
 #WEB_STMT_PREFNC_FL
-df_dc_only["WEB_STMT_PREFNC_FL_1"]=(df_dc_only["WEB_STMT_PREFNC_FL"]=="N")*1
-df_dc_only["WEB_STMT_PREFNC_FL_2"]=(df_dc_only["WEB_STMT_PREFNC_FL"]=="Y")*1
+df_dc_only=df_dc_only.withColumn("WEB_STMT_PREFNC_FL_1",0)
+df_dc_only=df_dc_only.withColumn("WEB_STMT_PREFNC_FL_1",\
+when((df_dc_only["WEB_STMT_PREFNC_FL"]=="N"),(df_dc_only["WEB_STMT_PREFNC_FL"])*1).\
+otherwise(when((df_dc_only["WEB_STMT_PREFNC_FL"]=="Y"),(df_dc_only["WEB_STMT_PREFNC_FL"])*1).\
+otherwise(0)))
 
-df_dc_onlyshort=df_dc_only.head()
+df_dc_onlyshort=df_dc_only.head(5)
 
-c1 = df_dc_only[['PO_ID','ADVICE_TYPE_1',
+c1 = df_dc_only.select('PO_ID','ADVICE_TYPE_1',
 'ADVICE_TYPE_2',
 'ADVICE_TYPE_3',
 'ADVICE_TYPE_4',
@@ -371,7 +370,7 @@ c1 = df_dc_only[['PO_ID','ADVICE_TYPE_1',
 'WATCH_LIST_FL_1',
 'WC_TOT_ASSET_buckets',
 'WEB_STMT_PREFNC_FL_1',
-'WEB_STMT_PREFNC_FL_2']]
+'WEB_STMT_PREFNC_FL_2')
 
 
 
@@ -388,91 +387,113 @@ acxiom_cols = ['po_id',
                'ap002719_heavyfbuser',
                'ap002727_businessfan']
 
-ax = pandas.read_csv(acxiom_file,usecols=acxiom_cols,sep='\t')
+ax = spark.read.option("sep","\t").csv(acxiom_file).select("'"+",".join(acxiom_cols)+"'").
 
 
 # In[33]:
 
-ax.replace(' ',np.nan,inplace=True)
+ax=ax.fillna(np.nan)
 
-ax[acxiom_cols[1:]] = ax[acxiom_cols[1:]].astype(float)
-ax['po_id'] = ax['po_id'].astype(int)
+#ax[acxiom_cols[1:]] = ax[acxiom_cols[1:]].astype(float)
+#ax['po_id'] = ax['po_id'].astype(int)
 
 #ap001374_advicepricefullsvcbrkg
-ax["ap001374_advicepricefullsvcbrkg_1"]=(ax["ap001374_advicepricefullsvcbrkg"]==1)*1
-ax["ap001374_advicepricefullsvcbrkg_2"]=(ax["ap001374_advicepricefullsvcbrkg"]==2)*1
-ax["ap001374_advicepricefullsvcbrkg_3"]=(ax["ap001374_advicepricefullsvcbrkg"]==3)*1
-ax["ap001374_advicepricefullsvcbrkg_4to5"]=0
-ax["ap001374_advicepricefullsvcbrkg_6to10"]=0
 
-ax.loc[(ax["ap001374_advicepricefullsvcbrkg"]>=4) & (ax["ap001374_advicepricefullsvcbrkg"]<=5),["ap001374_advicepricefullsvcbrkg_4to5"]]=1
-ax.loc[(ax["ap001374_advicepricefullsvcbrkg"]>=6) & (ax["ap001374_advicepricefullsvcbrkg"]<=10),["ap001374_advicepricefullsvcbrkg_6to10"]]=1
+ax=ax.withColumn("ap001374_advicepricefullsvcbrkg_1",when((ax["ap001374_advicepricefullsvcbrkg"]==1),(ax["ap001374_advicepricefullsvcbrkg"])*1).\
+otherwise(0))
+ax=ax.withColumn("ap001374_advicepricefullsvcbrkg_2",when((ax["ap001374_advicepricefullsvcbrkg"]==2),(ax["ap001374_advicepricefullsvcbrkg"])*1).\
+otherwise(0))
+ax=ax.withColumn("ap001374_advicepricefullsvcbrkg_3",when((ax["ap001374_advicepricefullsvcbrkg"]==3),(ax["ap001374_advicepricefullsvcbrkg"])*1).\
+otherwise(0))
+ax=ax.withColumn("ap001374_advicepricefullsvcbrkg_4to5",when((ax["ap001374_advicepricefullsvcbrkg"]>=4) & (ax["ap001374_advicepricefullsvcbrkg"]<=5),1).\
+otherwise(0))
+ax=ax.withColumn("ap001374_advicepricefullsvcbrkg_6to10",when((ax["ap001374_advicepricefullsvcbrkg"]>=6) & (ax["ap001374_advicepricefullsvcbrkg"]<=10),1).\
+otherwise(0))
+
+
 
 
 #ap001380_buysellstockfullsvcbrkg_1to3
-ax["ap001380_buysellstockfullsvcbrkg_1to3"]=0
-ax.loc[(ax["ap001380_buysellstockfullsvcbrkg"]>=1) & (ax["ap001380_buysellstockfullsvcbrkg"]<=3),["ap001380_buysellstockfullsvcbrkg_1to3"]]=1
-
+ax=ax.withColumn("ap001380_buysellstockfullsvcbrkg_1to3",when((ax["ap001380_buysellstockfullsvcbrkg"]>=1) & (ax["ap001380_buysellstockfullsvcbrkg"]<=3),1).\
+otherwise(0))
 
 #ap001398_othfullsvcaffin
-ax["ap001398_othfullsvcaffin_1"]=(ax["ap001398_othfullsvcaffin"]==1)*1
-ax["ap001398_othfullsvcaffin_2"]=(ax["ap001398_othfullsvcaffin"]==2)*1
-ax["ap001398_othfullsvcaffin_3"]=(ax["ap001398_othfullsvcaffin"]==3)*1
 
-ax["ap001398_othfullsvcaffin_4to5"]=0
-ax["ap001398_othfullsvcaffin_6to10"]=0
-ax.loc[(ax["ap001398_othfullsvcaffin"]>=4) & (ax["ap001398_othfullsvcaffin"]<=5),["ap001398_othfullsvcaffin_4to5"]]=1
-ax.loc[(ax["ap001398_othfullsvcaffin"]>=6) & (ax["ap001398_othfullsvcaffin"]<=10),["ap001398_othfullsvcaffin_6to10"]]=1
+ax=ax.withColumn("ap001398_othfullsvcaffin_1",when((ax["ap001398_othfullsvcaffin"]==1),(ax["ap001398_othfullsvcaffin"])*1).\
+otherwise(0))
 
+ax=ax.withColumn("ap001398_othfullsvcaffin_1",when((ax["ap001398_othfullsvcaffin"]==2),(ax["ap001398_othfullsvcaffin"])*1).\
+otherwise(0))
+
+ax=ax.withColumn("ap001398_othfullsvcaffin_1",when((ax["ap001398_othfullsvcaffin"]==3),(ax["ap001398_othfullsvcaffin"])*1).\
+otherwise(0))
+
+ax=ax.withColumn("ap001374_advicepricefullsvcbrkg_4to5",when((ax["ap001398_othfullsvcaffin"]>=4) & (ax["ap001398_othfullsvcaffin"]<=5),1).\
+otherwise(0))
+ax=ax.withColumn("ap001374_advicepricefullsvcbrkg_6to10",when((ax["ap001398_othfullsvcaffin"]>=6) & (ax["ap001398_othfullsvcaffin"]<=10),1).\
+otherwise(0))
 
 #ap001402_metfinplanner
-ax["ap001402_metfinplanner_1to5"]=0
-ax["ap001402_metfinplanner_6to9"]=0
-ax["ap001402_metfinplanner_10plus"]=0
-ax.loc[(ax["ap001402_metfinplanner"]>=1) & (ax["ap001402_metfinplanner"]<=5),["ap001402_metfinplanner_1to5"]]=1
-ax.loc[(ax["ap001402_metfinplanner"]>=6) & (ax["ap001402_metfinplanner"]<=9),["ap001402_metfinplanner_6to9"]]=1
-ax.loc[ax["ap001402_metfinplanner"]>=10,["ap001402_metfinplanner_10plus"]]=1
+
+ax=ax.withColumn("ap001402_metfinplanner_1to5",when((ax["ap001402_metfinplanner"]>=1) & (ax["ap001402_metfinplanner"]<=5),1).\
+otherwise(0))
+
+ax=ax.withColumn("ap001402_metfinplanner_6to9",when((ax["ap001402_metfinplanner"]>=6) & (ax["ap001402_metfinplanner"]<=9),1).\
+otherwise(0))
+
+ax=ax.withColumn("ap001402_metfinplanner_10plus",when((ax["ap001402_metfinplanner"]>=10),1).\
+otherwise(0))
+
 
 #ap001403_usepersnlmonmgr
-ax["ap001403_usepersnlmonmgr_1"]=(ax["ap001403_usepersnlmonmgr"]==1)*1
-ax["ap001403_usepersnlmonmgr_2"]=(ax["ap001403_usepersnlmonmgr"]==2)*1
-ax["ap001403_usepersnlmonmgr_3"]=(ax["ap001403_usepersnlmonmgr"]==3)*1
 
-ax["ap001403_usepersnlmonmgr_4to5"]=0
-ax["ap001403_usepersnlmonmgr_6to10"]=0
-ax.loc[(ax["ap001403_usepersnlmonmgr"]>=4) & (ax["ap001403_usepersnlmonmgr"]<=5),["ap001403_usepersnlmonmgr_4to5"]]=1
-ax.loc[(ax["ap001403_usepersnlmonmgr"]>=6) & (ax["ap001403_usepersnlmonmgr"]<=10),["ap001403_usepersnlmonmgr_6to10"]]=1
+ax=ax.withColumn("ap001403_usepersnlmonmgr_1",when((ax["ap001403_usepersnlmonmgr"]==1),(ax["ap001403_usepersnlmonmgr"])*1).\
+otherwise(0))
+ax=ax.withColumn("ap001403_usepersnlmonmgr_2",when((ax["ap001403_usepersnlmonmgr"]==2),(ax["ap001403_usepersnlmonmgr"])*1).\
+otherwise(0))
+ax=ax.withColumn("ap001403_usepersnlmonmgr_3",when((ax["ap001403_usepersnlmonmgr"]==3),(ax["ap001403_usepersnlmonmgr"])*1).\
+otherwise(0))
+ax=ax.withColumn("ap001403_usepersnlmonmgr_4to5",when((ax["ap001403_usepersnlmonmgr"]>=4) & (ax["ap001403_usepersnlmonmgr"]<=5),1).\
+otherwise(0))
+ax=ax.withColumn("ap001403_usepersnlmonmgr_6to10",when((ax["ap001403_usepersnlmonmgr"]>=6) & (ax["ap001403_usepersnlmonmgr"]<=10),1).\
+otherwise(0))
 
 
 #AP002719_HEAVYFBUSER
-ax["ap002719_heavyfbuser_1"]=0
-ax["ap002719_heavyfbuser_2"]=0
-ax["ap002719_heavyfbuser_5to12"]=0
-ax.loc[(ax["ap002719_heavyfbuser"]>=1) & (ax["ap002719_heavyfbuser"]<=10),["ap002719_heavyfbuser_1"]]=1
-ax.loc[(ax["ap002719_heavyfbuser"]>=11) & (ax["ap002719_heavyfbuser"]<=20),["ap002719_heavyfbuser_2"]]=1
-ax.loc[(ax["ap002719_heavyfbuser"]>=5) & (ax["ap002719_heavyfbuser"]<=12),["ap002719_heavyfbuser_5to12"]]=1
+
+ax=ax.withColumn("ap002719_heavyfbuser_1",when((ax["ap002719_heavyfbuser"]>=1) & (ax["ap002719_heavyfbuser"]<=10),1).\
+otherwise(0))
+ax=ax.withColumn("ap002719_heavyfbuser_2",when((ax["ap002719_heavyfbuser"]>=11) & (ax["ap002719_heavyfbuser"]<=20),1).\
+otherwise(0))
+
+ax=ax.withColumn("ap002719_heavyfbuser_5to12",when((ax["ap002719_heavyfbuser"]>=5) & (ax["ap002719_heavyfbuser"]<=12),1).\
+otherwise(0))
+
 
 #AP002727_BUSINESSFAN
-ax["ap002727_businessfan_8to10"]=0
-ax["ap002727_businessfan_11to12"]=0
-ax["ap002727_businessfan_13to14"]=0
-ax["ap002727_businessfan_15to16"]=0
-ax["ap002727_businessfan_17andup"]=0
-ax.loc[(ax["ap002727_businessfan"]>=8) & (ax["ap002727_businessfan"]<=10),["ap002727_businessfan_8to10"]]=1
-ax.loc[(ax["ap002727_businessfan"]>=11) & (ax["ap002727_businessfan"]<=12),["ap002727_businessfan_11to12"]]=1
-ax.loc[(ax["ap002727_businessfan"]>=13) & (ax["ap002727_businessfan"]<=14),["ap002727_businessfan_13to14"]]=1
-ax.loc[(ax["ap002727_businessfan"]>=15) & (ax["ap002727_businessfan"]<=16),["ap002727_businessfan_15to16"]]=1
-ax.loc[ax["ap002727_businessfan"]>=17, ["ap002727_businessfan_17andup"]]=1
+
+ax=ax.withColumn("ap002727_businessfan_8to10",when((ax["ap002727_businessfan"]>=8) & (ax["ap002727_businessfan"]<=10),1).\
+otherwise(0))
+ax=ax.withColumn("ap002727_businessfan_11to12",when((ax["ap002727_businessfan"]>=11) & (ax["ap002727_businessfan"]<=12),1).\
+otherwise(0))
+
+ax=ax.withColumn("ap002727_businessfan_13to14",when((ax["ap002727_businessfan"]>=13) & (ax["ap002727_businessfan"]<=14),1).\
+otherwise(0))
+
+ax=ax.withColumn("ap002727_businessfan_15to16",when((ax["ap002727_businessfan"]>=15) & (ax["ap002727_businessfan"]<=16),1).\
+otherwise(0))
+
+ax=ax.withColumn("ap002727_businessfan_17andup",when((ax["ap002727_businessfan"]>=17),1).\
+otherwise(0))
 
 
 # In[34]:
 
-ax['PO_ID']=ax['po_id']
+ax = ax.withColumn("PO_ID",'po_id')
 
 
-# In[36]:
 
-a1 = ax[['PO_ID',
+a1 = ax.select('PO_ID',
 'ap001374_advicepricefullsvcbrkg_1',
 'ap001374_advicepricefullsvcbrkg_2',
 'ap001374_advicepricefullsvcbrkg_3',
@@ -499,13 +520,13 @@ a1 = ax[['PO_ID',
 'ap002727_businessfan_11to12',
 'ap002727_businessfan_13to14',
 'ap002727_businessfan_15to16',
-'ap002727_businessfan_17andup']]
+'ap002727_businessfan_17andup')
 
 
-c1short=c1.head()
-a1short=a1.head()
+c1short=c1.head(5)
+a1short=a1.head(5)
 
-model =  pandas.merge(c1, a1, on='PO_ID', how='inner', sort=True, )
+model =  c1.join(a1, 'PO_ID', 'inner').orderBy('PO_ID')
 
 
 
@@ -514,9 +535,9 @@ model =  pandas.merge(c1, a1, on='PO_ID', how='inner', sort=True, )
 # In[39]:
 
 ########################### MODEL 5 (which has 6 varibales)
-mult5=pandas.read_csv(r'C:\users\utun\Downloads\Att Seg Model 5.csv') #read_csv is a funcction in pandas
+mult5=spark.read.csv(r'C:\users\utun\Downloads\Att Seg Model 5.csv') #read_csv is a funcction in pandas
 #mult5names=pd.read_csv(r'\\vanguard\entdfs\prdentas01cia11\MZippilli\2018\Attitudnal Segmentation\AttSegModel 5Names.csv') #read_csv is a funcction in pandas
-con5=pandas.read_csv(r'C:\users\utun\Downloads\con5.csv') #read_csv is a funcction in pandas
+con5=spark.read.csv(r'C:\users\utun\Downloads\con5.csv') #read_csv is a funcction in pandas
 
 
 # In[41]:
@@ -560,11 +581,13 @@ mod5=['ADVICE_TYPE_1',
 'WEB_STMT_PREFNC_FL_1',
 'WEB_STMT_PREFNC_FL_2']
 
-model5copy=model.copy()
+model5copy=model.to_Pandas()
+mult5=mult5.to_Pandas()
+
 
 for n in range(6):
     sum_name="SEG_"+str(n+1)+"_SUM"
-    model5copy[sum_name]=model5copy[mod5].dot(mult5.iloc[:,n].values)#the : refers to all the rows
+    model5copy=model5copy.withColumn(sum_name,model5copy[mod5].dot(mult5.iloc[:,n].values)#the : refers to all the rows
     
 
 
@@ -638,7 +661,7 @@ ATT_SEG.to_csv(path_or_buf=r'C:\users\utun\Downloads\ATT_SEG\ATT_SEG_201807.csv'
 
 # In[50]:
 
-rtl_att_seg=pandas.read_csv(r'C:\Users\utun\Desktop\ATT_SEG\ATT_SEG_201809.csv') #read_csv is a funcction in pandas
+rtl_att_seg=spark.read.csv(r'C:\Users\utun\Desktop\ATT_SEG\ATT_SEG_201809.csv') #read_csv is a funcction in pandas
 
 
 # In[54]:
@@ -659,21 +682,6 @@ rtl_iig_att_seg = pandas.concat(frames)
 
 # In[57]:
 
-rtl_iig_att_seg.to_csv(r'C:\users\utun\Downloads\ATT_SEG\RTL_IIG_ATT_SEG_201809.csv')
+rtl_iig_att_seg.write.option("header","true").csv(r'C:\users\utun\Downloads\ATT_SEG\RTL_IIG_ATT_SEG_201809.csv')
 
 
-# In[59]:
-
-ATT_SEG.dtypes
-
-
-# In[63]:
-
-ATT_SEG.loc[~ATT_SEG['PERSONA'].isin(['Sky'])]
-
-
-# In[ ]:
-
-
-
-3km55
