@@ -684,4 +684,4 @@ rtl_iig_att_seg = pandas.concat(frames)
 
 rtl_iig_att_seg.write.option("header","true").csv(r'C:\users\utun\Downloads\ATT_SEG\RTL_IIG_ATT_SEG_201809.csv')
 
-
+hjgjhgj
