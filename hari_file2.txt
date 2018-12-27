@@ -5,6 +5,19 @@
 # In[11]:
 
 
+df_zip_est_inc = pandas.read_sas('zip_est_income.sas7bdat',encoding='latin')
+df_zip_est_inc = df_zip_est_inc.withColumnRenamed('zip_cd','ZIP_CD')
+
+df_zip_est_inc['zip_cd']=df_zip_est_inc['ZIP_CD']
+
+df_zip_est_inc = df_zip_est_inc.fillna({'zip_cd':0})
+df_zip_est_inc['zip_cd'].fillna(0)
+df_bal3['zip_cd'].fillna(0)
+
+df_zip_est_inc = spark.createDataFrame(df_zip_est_inc)
+
+
+
 
 #/*ELIMINATE VISITORS NOT IN BASE*/
 web2 = pandas.merge(web1,df_bal3[['po_id_uniq','bin_web_reg_fl_now']], , how='right', indicator=False)
