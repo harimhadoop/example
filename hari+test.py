@@ -80,12 +80,16 @@ df_dc_only.head()
 #ToDo
 now = pandas.Timestamp(DT.datetime.now())
 #below are the addition after adding this run from beggning
-now = pandas.Timestamp(DT.datetime.now())
-#df_dc_only['VMAP_PART_BGN_DT'] = pandas.to_datetime(df_dc_only['VMAP_PART_BGN_DT'], format='%d%b%Y')    # 1
-df_dc_only = df_dc_only.withColumn('VMAP_PART_BGN_DT', from_unixtime(unix_timestamp('VMAP_PART_BGN_DT', '%d%b%Y')))
-df_dc_only = df_dc_only.where(df_dc_only['VMAP_PART_BGN_DT'] < now, df_dc_only['VMAP_PART_BGN_DT'] -  np.timedelta64(100, 'Y'))   # 2
-df_dc_only = df_dc_only.withColumn('CLNT_TENURE_YEAR',(now - df_dc_only['VMAP_PART_BGN_DT']).astype('<m8[Y]'))
-
+def time_diff(col):
+    return col-  np.timedelta64(100)
+udf_time_diff = udf(time_diff)
+def time_diff_col(col):
+    now = pandas.Timestamp(DT.datetime.now())
+    return now-col
+udf_time_diff_col = udf(time_diff_col)
+df_dc_only = df_dc_only.withColumn('VMAP_PART_BGN_DT',when(df_dc_only['VMAP_PART_BGN_DT'] < now,udf_time_diff(df_dc_only['VMAP_PART_BGN_DT'])).\
+otherwise(df_dc_only['VMAP_PART_BGN_DT']))   # 2
+df_dc_only = df_dc_only.withColumn('CLNT_TENURE_YEAR',udf_time_diff_col(df_dc_only['VMAP_PART_BGN_DT']))
 # In[8]:
 
 df_dc_only = df_dc_only.withColumn('ADVICE_TYPE', lit('C99_NOT_ADVICE'))
