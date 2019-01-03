@@ -79,7 +79,12 @@ df_dc_only.head()
 
 #ToDo
 now = pandas.Timestamp(DT.datetime.now())
-
+#below are the addition after adding this run from beggning
+now = pandas.Timestamp(DT.datetime.now())
+#df_dc_only['VMAP_PART_BGN_DT'] = pandas.to_datetime(df_dc_only['VMAP_PART_BGN_DT'], format='%d%b%Y')    # 1
+df_dc_only = df_dc_only.withColumn('VMAP_PART_BGN_DT', from_unixtime(unix_timestamp('VMAP_PART_BGN_DT', '%d%b%Y')))
+df_dc_only = df_dc_only.where(df_dc_only['VMAP_PART_BGN_DT'] < now, df_dc_only['VMAP_PART_BGN_DT'] -  np.timedelta64(100, 'Y'))   # 2
+df_dc_only = df_dc_only.withColumn('CLNT_TENURE_YEAR',(now - df_dc_only['VMAP_PART_BGN_DT']).astype('<m8[Y]'))
 
 # In[8]:
 
