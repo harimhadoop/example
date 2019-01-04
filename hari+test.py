@@ -15,6 +15,11 @@ import findspark
 
 findspark.init()
 
+df_dc_only=df_dc_only.withColumn("ADVICE_TYPE",when(df_dc_only["ADVICE_TYPE_1"]=="1",1).\
+otherwise(when(df_dc_only["ADVICE_TYPE_2"]=="1",2).otherwise(when(df_dc_only["ADVICE_TYPE_3"]=="1",3).\
+otherwise(when(df_dc_only["ADVICE_TYPE_4"]=="1",4).otherwise(when(df_dc_only["ADVICE_TYPE_99"]=="1",99).\
+otherwise(0))))))
+
 
 # In[3]:
 
