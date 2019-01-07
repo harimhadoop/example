@@ -91,5 +91,5 @@ df_bal3 = df_bal3.withColumn('EDUC_9514',lit(1))
 
 cols_tmp = df_bal3.columns
 cols_tmp.append('Research_pgvw360')
-cols_tmp.append('IRAs_sess360')                                                      
+cols_tmp.append('Advice_pgvw360')                                                      
 df_bal3 = df_bal3.join(uniq_poid_ret_wec, 'po_id' , how='left').select(cols_tmp)
