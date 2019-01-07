@@ -84,3 +84,7 @@ df_bal3 = df_bal3.withColumn('female_fl',when(col('best_gndr_tx')=='Female',1).o
 df_bal3 = df_bal3.withColumn('single_fl',when(col('best_mrtl_grp')=='Single',1).otherwise(0))
 df_bal3 = df_bal3.withColumn('EDUC_9514_HS_FL',lit(1))                                                          
 df_bal3 = df_bal3.withColumn('EDUC_9514',lit(1))
+
+                                                      
+                                                      
+df_bal3 = df_bal3.join(uniq_poid_ret_wec, 'po_id' , how='left').select(df_bal3.columns)
