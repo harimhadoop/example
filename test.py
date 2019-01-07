@@ -88,3 +88,4 @@ df_bal3 = df_bal3.withColumn('EDUC_9514',lit(1))
                                                       
                                                       
 df_bal3 = df_bal3.join(uniq_poid_ret_wec, 'po_id' , how='left').select(df_bal3.columns)
+df_bal3 = df_bal3.join(uniq_poid_ret_wec, 'po_id' , how='left').select(df_bal3.columns.append(['Research_pgvw360','IRAs_sess360']))
