@@ -112,3 +112,4 @@ web1 = wec_pe.join(uniq_poid_ret_wec,'po_id','outer')
 
 web2 = web1.join(df_bal3.select('po_id_uniq','bin_web_reg_fl_now'),'po_id','right')
                                                      
+score_web_reduced = web2.select('po_id',col('cap_Nsghts_Nws_Prspctvs_pgvw360').alias('Research_pgvw360'),'RIM_Over_Yr','RIM_Been_While')
