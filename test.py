@@ -93,3 +93,23 @@ cols_tmp = df_bal3.columns
 cols_tmp.append('Research_pgvw360')
 cols_tmp.append('Advice_pgvw360')                                                      
 df_bal3 = df_bal3.join(uniq_poid_ret_wec, 'po_id' , how='left').select(cols_tmp)
+
+                                                      
+df_bal3 = df_bal3.withColumn('cap_Research_pgvw360',when(df_bal3['Research_pgvw360']>45, 45 ).otherwise( df_bal3['Research_pgvw360']))
+df_bal3 = df_bal3.withColumn('cap_IRAs_sess360',when(df_bal3['Advice_pgvw360']>45, 45 ).otherwise( df_bal3['Advice_pgvw360']))
+
+wec_pe = spark.read.option("header","true").csv('C:\\Users\\ubwv\\Desktop\\EA\\wec logon characteristics.csv')
+web1 = wec_pe.join(uniq_poid_ret_wec,'po_id','outer')
+                                                    
+df_bal3 = df_bal3.withColumn('cap_Research_pgvw360'           ,when(df_bal3['Research_pgvw360']>45, 45 ).otherwise( df_bal3['Research_pgvw360']))
+df_bal3 = df_bal3.withColumn('cap_IRAs_sess360'           ,when(df_bal3['Advice_pgvw360']>45, 45 ).otherwise( df_bal3['Advice_pgvw360']))
+
+
+
+wec_pe = spark.read.option("header","true").csv('C:\\Users\\ubwv\\Desktop\\EA\\wec logon characteristics.csv')
+
+web1 = wec_pe.join(uniq_poid_ret_wec,'po_id','outer')
+
+web2 = web1.join(df_bal3.select('po_id_uniq','bin_web_reg_fl_now'),'po_id','right')
+
+                                                      
