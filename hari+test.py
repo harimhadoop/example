@@ -762,3 +762,19 @@ rtl_iig_att_seg = pandas.concat(frames)
 rtl_iig_att_seg.write.option("header","True").csv(r'C:\\Users\\ubwv\\Desktop\\EA\\RTL_IIG_ATT_SEG_201809.csv')
 
 
+1) Reading the files PAR_20180801.csv,ATT_SEG_201807.csv in the spark way
+2) extracting unique po_id's from att_seg and filtering only these from PAR_20180801 
+3) updating the column VMAP_PART_BGN_DT with 100 days previous date for all the records date then current date
+4) Join this resultant dataframe with dataframe with "uniq_poid_pe_wec_red  .csv" file.
+5) Out of the resultant join dataset, select the following columns 'PO_ID','ADVICE_TYPE','BEST_AGE','BRKG_E_DELVRY_FLAG','BUY_SELL_TOT_CNT','CLNT_SGMNT_CD','CLNT_TENURE_YEAR','GENDR_CD','LMF_BAL','POSN_CNT','IIG_LOGON_CNT','ROLLOVER_ACCT_CNT','ROTH_ACCT_CNT','TAXABLE_ACCT_CNT','TRADITIONAL_ACCT_CNT','VBA_VGI_ETF_BAL','VBA_VGI_MF_BAL','VGI_BUY_CNT','WATCH_LIST_FL','WC_TOT_ASSET','WEB_STMT_PREFNC_FL'
+6)  Apply conditionnal filtering on these above columns and create some new columns based on the filters
+7)  Join the resultant dataframe with Acxiom_Oct2018.csv dataframe
+8) Leveraging this dataframe following new columns are created after applying few new filters 'ap001374_advicepricefullsvcbrkg_1',
+'ap001374_advicepricefullsvcbrkg_2','ap001374_advicepricefullsvcbrkg_3','ap001374_advicepricefullsvcbrkg_4to5','ap001374_advicepricefullsvcbrkg_6to10',
+'ap001380_buysellstockfullsvcbrkg_1to3','ap001398_othfullsvcaffin_1','ap001398_othfullsvcaffin_2','ap001398_othfullsvcaffin_3',
+'ap001398_othfullsvcaffin_4to5','ap001398_othfullsvcaffin_6to10','ap001402_metfinplanner_1to5','ap001402_metfinplanner_6to9',
+'ap001402_metfinplanner_10plus','ap001403_usepersnlmonmgr_1','ap001403_usepersnlmonmgr_2','ap001403_usepersnlmonmgr_3','ap001403_usepersnlmonmgr_4to5',
+'ap001403_usepersnlmonmgr_6to10','ap002719_heavyfbuser_1','ap002719_heavyfbuser_2','ap002719_heavyfbuser_5to12','ap002727_businessfan_8to10',
+'ap002727_businessfan_11to12','ap002727_businessfan_13to14','ap002727_businessfan_15to16','ap002727_businessfan_17andup'
+9) utilising the generated models in model5 and con5 by a dot product files, generate different 6 segments
+10) And finally save it the resultant segments to a file RTL_IIG_ATT_SEG_201809
