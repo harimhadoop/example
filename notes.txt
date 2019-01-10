@@ -1,0 +1,20 @@
+# Sri Gurubhyonamaha
+
+Comments
+
+1) With Pandas dataframes it is limited to a single system, where spark is in memory cluster computing.
+ 2) In pyspark we operate on spark dataframes which are both columnar and can operate on a clusters like emr,
+ where the data could be stored on a file system like hdfs or s3 buckets
+ 3) Utilised the udf's functionality whereever required, to address pre defined functionality which are not present in pyspark predefined functions.
+ 4) Utilising the API provided by spark and the functionalities of python combined we are migrating the code to cluster ready module.
+ 5) For huge amounts of data, python really fails on the performance count due to its limition of standalone systems.
+ 6) But pyspark gives this unique ability to load huge amounts of data on a single cluster and process data as a single data unit.
+ 7) In the current project, as and when the cluster is available we will be able to use inbuilt configuration settings of pyspark as a cluster 
+ and would make more faster.
+ 8) Code can be optimised further by utilizing functions like persist, cache and checkpoints.
+ 9) The above mentioned features in point 8 with configurtion settings for a particular spark session or by passing it to spark-submit command
+ efficiency increases.
+ 10) Calling Persist on a pyspark dataframe the data is completly stored in memory and computations are done in memory
+ 11) Persist has different options like persist in memory_only, memory_disk etc on situation it can be used while running it on a cluster.
+ 12) using checkpointing partial dataframe or freezing the contents of a dataframe which reduces the plan of DAG in spark.
+ 13) As spark involves lazy computation by using checkpoints the lazy computation can be partially reduced there by reducing the plan of excution on final action call.
