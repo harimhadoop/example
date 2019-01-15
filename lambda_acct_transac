@@ -1,0 +1,30 @@
+import yaml             
+import requests         
+from requests import *  
+import json
+import boto3
+from botocore.exceptions import ClientError
+def load_acct_trans(dynamodb, s3_bucket, locale):
+	try:
+		#arn:aws:s3:::adviceaibackup
+		s3 = boto3.resource("s3").Bucket("adviceaibackup") #bucket name
+		get_acct = lambda f: json.load(s3.Object(key=f).get()[0]["account"])
+		# connect to dynamo
+		dynamodb = boto3.resource('dynamodb')
+		table = dynamodb.Table('dynamo_acct_trans')  #table name
+		DynamoDB.Table.put_item():
+		
+		table.put_item(
+		Item=get_acct
+		)
+		get_tranx = lambda f: json.load(s3.Object(key=f).get()[0]["transaction"])
+		# Get the service resource.
+		dynamodb = boto3.resource('dynamodb')
+		table = dynamodb.Table('dynamo_acct_trans')
+		DynamoDB.Table.put_item():
+		
+		table.put_item(
+		Item=get_tranx
+		)
+	except ClientError as e:
+		print e	
